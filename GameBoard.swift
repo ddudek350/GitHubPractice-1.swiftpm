@@ -1,10 +1,3 @@
-//
-//  GameBoard.swift
-//  GitHubPractice 1
-//
-//  Created by Grigorii V. Chushkin on 5/5/25.
-//
-
 import Foundation
 import Combine
 
@@ -53,9 +46,9 @@ class GameBoard: ObservableObject {
         currentPlayer = currentPlayer == "X" ? "O" : "X"
         
         if gameMode == .playerVsBot && currentPlayer == "O" && !gameOver {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.makeBotMove(gameMode: gameMode)
-            }
+            
+                makeBotMove(gameMode: gameMode)
+            
         } else if !gameOver {
             startTimer(gameMode: gameMode)
         }
@@ -111,7 +104,7 @@ class GameBoard: ObservableObject {
     
     func checkWin() -> Bool {
         let directions = [
-            (dx: 1, dy: 0),  
+            (dx: 1, dy: 0),
             (dx: 0, dy: 1),
             (dx: 1, dy: 1),
             (dx: 1, dy: -1)
@@ -196,12 +189,12 @@ class GameBoard: ObservableObject {
                 self.timeLeft -= 1
                 if self.timeLeft <= 0 {
                     self.moveTimer?.cancel()
-                    self.makeRandomMove(gameMode: gameMode)
+                    makeRandomMove(gameMode: gameMode)
                 }
             }
     }
     
-    private func makeRandomMove(gameMode: GameMode) {
+    public func makeRandomMove(gameMode: GameMode) {
         guard !gameOver else { return }
         var emptySpots = [(Int, Int)]()
         for i in 0..<boardSize {
@@ -217,4 +210,3 @@ class GameBoard: ObservableObject {
         }
     }
 }
-
