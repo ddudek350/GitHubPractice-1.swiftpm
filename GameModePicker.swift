@@ -10,14 +10,15 @@ import SwiftUI
 struct GameModePicker: View {
     @Binding var gameMode: GameMode
     let gameStarted: Bool
-    
+
     var body: some View {
         Picker("Game Mode", selection: $gameMode) {
-            Text("2 Players").tag(GameMode.playerVsPlayer)
-            Text("vs Computer").tag(GameMode.playerVsBot)
+            ForEach(GameMode.allCases) { mode in
+                Text(mode.displayName).tag(mode)
+            }
         }
-        .pickerStyle(SegmentedPickerStyle())
-        .padding(.horizontal)
+        .pickerStyle(.segmented)
         .disabled(gameStarted)
     }
 }
+

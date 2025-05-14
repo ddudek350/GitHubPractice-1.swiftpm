@@ -10,45 +10,41 @@ import SwiftUI
 struct GameStatusView: View {
     @ObservedObject var gameBoard: GameBoard
     @Binding var gameMode: GameMode
-    
+
     var body: some View {
-        if gameBoard.gameOver {
-            VStack {
-                Text(gameBoard.winner.isEmpty ? "It's a draw!" : "\(winnerText()) wins!")
-                    .font(.title)
-                    .padding(.bottom, 10)
-                
-                Button(action: gameBoard.resetGame(gameMode: gameMode)) {
-                    Text("Play Again")
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+        VStack {
+            if gameBoard.gameOver {
+                if let winner = gameBoard.winner {
+                    Text("\(winner.rawValue) wins!")
+                        .font(.headline)
+                } else {
+                    Text("It's a draw!")
+                        .font(.headline)
                 }
-                .frame(width: 200)
+
+                Button("New Game") {
+                    gameBoard.startNewGame(gameMode: gameMode)
+                }
+                .padding(.top)
+            } else {
+                Text(currentTurnText())
+                    .font(.subheadline)
+
+                HStack {
+                    Text("Time left:")
+                    Text("\(gameBoard.timeLeft)s")
+                        .font(.caption.monospacedDigit())
+                }
             }
-        } else {
-            Text(currentTurnText())
-                .font(.title2)
-                .foregroundColor(gameBoard.currentPlayer == "X" ? .blue : .red)
         }
     }
-    
-    private func winnerText() -> String {
-        if gameMode == .playerVsBot && gameBoard.winner == "O" {
-            return "Computer"
-        } else {
-            return "Player \(gameBoard.winner)"
-        }
-    }
-    
+
     private func currentTurnText() -> String {
         switch gameMode {
         case .playerVsPlayer:
-            return "Player \(gameBoard.currentPlayer)'s turn"
+            return "Player \(gameBoard.currentPlayer.rawValue)'s turn"
         case .playerVsBot:
-            return gameBoard.currentPlayer == "O" ? "Computer's turn" : "Your turn"
+            return gameBoard.currentPlayer == .o ? "Computer's turn" : "Your turn"
         }
     }
 }

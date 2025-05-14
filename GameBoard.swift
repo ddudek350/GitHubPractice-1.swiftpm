@@ -1,246 +1,147 @@
 import Foundation
 import Combine
 
-class GameBoard: ObservableObject {
-    @Published var board: [[String]]
-    @Published var currentPlayer = "X"
-    @Published var gameOver = false
-    @Published var winner = ""
-    @Published var timeLeft: Int = 5
-    @Published var winLength = 3
+enum Player: String {
+    case x = "X"
+    case o = "O"
 
-    private var justExpanded = false 
-    private var boardSize = 3
+    var next: Player { self == .x ? .o : .x }
+}
+
+class GameBoard: ObservableObject {
+    @Published var board: [[Player?]]
+    @Published var currentPlayer: Player = .x
+    @Published var gameOver = false
+    @Published var winner: Player?
+    @Published var timeLeft: Int = 5
+    @Published var winLength: Int = 3
+
     private var moveTimer: AnyCancellable?
-    
+
     init(gameMode: GameMode) {
-        board = Array(repeating: Array(repeating: "", count: boardSize), count: boardSize)
+        board = Array(repeating: Array(repeating: nil, count: winLength), count: winLength)
         startNewGame(gameMode: gameMode)
     }
-    
-    var gameStarted: Bool {
-        return board.flatMap { $0 }.contains { !$0.isEmpty }
-    }
-    
-    func makeMove(row: Int, col: Int, gameMode: GameMode) {
-        guard board[row][col].isEmpty, !gameOver else { return }
-        
-        board[row][col] = currentPlayer
-        
-        if checkWin() {
-            winner = currentPlayer
-            gameOver = true
-            moveTimer?.cancel()
-            return
-        }
-        
-        if checkDraw() {
-            if !checkWin() {
-                expandBoard(gameMode: gameMode)
-                currentPlayer = currentPlayer == "X" ? "O" : "X"
 
-                if gameMode == .playerVsBot && currentPlayer == "O"{
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5){
-                        self.makeBotMove(gameMode: gameMode)
-                    }
-                } else if gameMode == .playerVsPlayer{
-                    startTimer(gameMode: gameMode)
-                }
-                return
-            } else {
-                gameOver = true
-                moveTimer?.cancel()
-                return
-            }
-        }
-        
-        currentPlayer = currentPlayer == "X" ? "O" : "X"
-        
-        if gameMode == .playerVsBot {
-            moveTimer?.cancel()
-            if currentPlayer == "O" && !gameOver{
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5)
-            }            
-                makeBotMove(gameMode: gameMode)
-            
-        } else if currentPlayer == "X" && !gameOver {
-            startTimer(gameMode: gameMode)
-        } else if !gameOver {
-            startTimer(gameMode: gameMode)
-        }
-    }
-    
-    private func makeBotMove(gameMode: GameMode) {
-        let bestMove = findBestMove()
-        makeMove(row: bestMove.row, col: bestMove.col, gameMode: gameMode)
-    }
-    
-    private func findBestMove() -> (row: Int, col: Int) {
-        for i in 0..<boardSize {
-            for j in 0..<boardSize {
-                if board[i][j].isEmpty {
-                    board[i][j] = "O"
-                    if checkWin() {
-                        board[i][j] = ""
-                        return (i, j)
-                    }
-                    board[i][j] = ""
-                }
-            }
-        }
-        
-        for i in 0..<boardSize {
-            for j in 0..<boardSize {
-                if board[i][j].isEmpty {
-                    board[i][j] = "X"
-                    if checkWin() {
-                        board[i][j] = ""
-                        return (i, j)
-                    }
-                    board[i][j] = ""
-                }
-            }
-        }
-        
-        if boardSize > 1 && board[boardSize/2][boardSize/2].isEmpty {
-            return (boardSize/2, boardSize/2)
-        }
-        
-        var emptySpots = [(Int, Int)]()
-        for i in 0..<boardSize {
-            for j in 0..<boardSize {
-                if board[i][j].isEmpty {
-                    emptySpots.append((i, j))
-                }
-            }
-        }
-        
-        return emptySpots.randomElement() ?? (0, 0)
-    }
-    
-    func checkWin() -> Bool {
-        let directions = [
-            (dx: 1, dy: 0),
-            (dx: 0, dy: 1),
-            (dx: 1, dy: 1),
-            (dx: 1, dy: -1)
-        ]
-        
-        for row in 0..<board.count {
-            for col in 0..<board[row].count {
-                let symbol = board[row][col]
-                guard !symbol.isEmpty else { continue }
-                
-                for dir in directions {
-                    var count = 1
-                    
-                    for step in 1..<winLength {
-                        let newRow = row + dir.dy * step
-                        let newCol = col + dir.dx * step
-                        
-                        if newRow >= 0, newRow < board.count,
-                           newCol >= 0, newCol < board[row].count,
-                           board[newRow][newCol] == symbol {
-                            count += 1
-                        } else {
-                            break
-                        }
-                    }
-                    
-                    if count >= winLength {
-                        return true
-                    }
-                }
-            }
-        }
-        
-        return false
-    }
-
-    
-    private func checkDraw() -> Bool {
-        for row in board {
-            for cell in row {
-                if cell.isEmpty {
-                    return false
-                }
-            }
-        }
-        return true
-    }
-    
-    private func expandBoard() {
-        boardSize += 2
-        winLength += (winLength + 1 <= 4 ? 1:0)
-        for i in 0..<board.count {
-            board[i].insert("", at: 0)
-            board[i].append("")
-        }
-        
-        let newRow = Array(repeating: "", count: boardSize)
-        board.insert(newRow, at: 0)
-        board.append(newRow)
-        timeLeft = 5
-    }
-
-
-    
-    func resetGame() {
+    func startNewGame(gameMode: GameMode) {
         winLength = 3
-        boardSize = 3
-        board = Array(repeating: Array(repeating: "", count: boardSize), count: boardSize)
-        currentPlayer = "X"
+        board = Array(repeating: Array(repeating: nil, count: winLength), count: winLength)
+        currentPlayer = .x
         gameOver = false
-        winner = ""
+        winner = nil
         timeLeft = 5
         moveTimer?.cancel()
-        startNewGame(gameMode: gameMode)
+        handleNextMove(gameMode: gameMode)
     }
-    
+
+    func makeMove(row: Int, col: Int, gameMode: GameMode) {
+        guard !gameOver, board[row][col] == nil else { return }
+        board[row][col] = currentPlayer
+        moveTimer?.cancel()
+
+        if checkWin(from: (row, col)) {
+            winner = currentPlayer
+            gameOver = true
+            return
+        }
+
+        if checkDraw() {
+            expandBoardIfNeeded()
+            switchPlayer()
+            handleNextMove(gameMode: gameMode)
+            return
+        }
+
+        switchPlayer()
+        handleNextMove(gameMode: gameMode)
+    }
+
+    private func handleNextMove(gameMode: GameMode) {
+        if gameMode == .playerVsBot && currentPlayer == .o {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.makeBotMove(gameMode: gameMode)
+            }
+        } else {
+            startTimer(gameMode: gameMode)
+        }
+    }
+
     private func startTimer(gameMode: GameMode) {
         timeLeft = 5
         moveTimer?.cancel()
-        moveTimer = Timer
-            .publish(every: 1, on: .main, in: .common)
+        moveTimer = Timer.publish(every: 1, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 self.timeLeft -= 1
                 if self.timeLeft <= 0 {
                     self.moveTimer?.cancel()
-                    makeRandomMove(gameMode: gameMode)
+                    self.makeRandomMove(gameMode: gameMode)
                 }
             }
     }
-    
-    public func makeRandomMove(gameMode: GameMode) {
+
+    private func makeRandomMove(gameMode: GameMode) {
         guard !gameOver else { return }
-        var emptySpots = [(Int, Int)]()
-        for i in 0..<boardSize {
-            for j in 0..<boardSize {
-                if board[i][j].isEmpty {
-                    emptySpots.append((i, j))
-                }
+        let emptyCells = board.enumerated().flatMap { row, cols in
+            cols.enumerated().compactMap { col, player in
+                player == nil ? (row, col) : nil
             }
         }
-        
-        if let move = emptySpots.randomElement() {
-            makeMove(row: move.0, col: move.1, gameMode: gameMode)
+        if let (row, col) = emptyCells.randomElement() {
+            makeMove(row: row, col: col, gameMode: gameMode)
         }
     }
-    func startNewGame(gameMode: GameMode){
-    winLength = 3
-    boardSize = 3
-    board = Array(repeating: Array(repeating: "", count: boardSize), count:boardSize)
-    gameOver = false
-    winner = ""
-    timeLeft = 5
-    moveTimer?.cancel()
-    currentPlayer = Bool.random() ? "X" : "O"
-    if gameMode == .playerVsBot && currentPlayer == "O"{
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5){
-            self.makeBotMove(gameMode: gameMode)
+
+    private func makeBotMove(gameMode: GameMode) {
+        makeRandomMove(gameMode: gameMode)
+    }
+
+    private func checkWin(from lastMove: (Int, Int)) -> Bool {
+        let directions = [(1,0), (0,1), (1,1), (1,-1)]
+        for (dx, dy) in directions {
+            var count = 1
+            count += countConsecutive(from: lastMove, delta: (dx, dy))
+            count += countConsecutive(from: lastMove, delta: (-dx, -dy))
+            if count >= winLength {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func countConsecutive(from start: (Int, Int), delta: (Int, Int)) -> Int {
+        var count = 0
+        var position = (start.0 + delta.0, start.1 + delta.1)
+        while position.0 >= 0 && position.0 < board.count &&
+              position.1 >= 0 && position.1 < board.count &&
+              board[position.0][position.1] == currentPlayer {
+            count += 1
+            position = (position.0 + delta.0, position.1 + delta.1)
+        }
+        return count
+    }
+
+    private func checkDraw() -> Bool {
+        return !board.flatMap { $0 }.contains(nil)
+    }
+
+    private func expandBoardIfNeeded() {
+        let oldSize = board.count
+        let newSize = oldSize + 2
+        let emptyRow = Array<Player?>(repeating: nil, count: newSize)
+        var newBoard = [emptyRow]
+        for row in board {
+            newBoard.append([nil] + row + [nil])
+        }
+        newBoard.append(emptyRow)
+        board = newBoard
+        if winLength < 4 {
+            winLength = 4
         }
     }
-}
+
+    private func switchPlayer() {
+        currentPlayer = currentPlayer.next
+    }
 }
