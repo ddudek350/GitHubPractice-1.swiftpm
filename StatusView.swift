@@ -18,7 +18,7 @@ struct GameStatusView: View {
                     .font(.title)
                     .padding(.bottom, 10)
                 
-                Button(action: gameBoard.resetGame) {
+                Button(action: gameBoard.resetGame(gameMode: gameMode)) {
                     Text("Play Again")
                         .padding()
                         .frame(maxWidth: .infinity)

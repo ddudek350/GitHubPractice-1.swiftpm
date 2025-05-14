@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var gameBoard = GameBoard()
+    @StateObject private var gameBoard = GameBoard(gameMode: .playerVsPlayer)
     @State private var gameMode: GameMode = .playerVsPlayer
     
     var body: some View {
@@ -29,8 +29,8 @@ struct ContentView: View {
                 
             }
             .frame(width: 300, height: 500)
-            .onChange(of: gameMode) {
-                gameBoard.resetGame()
+            .onChange(of: gameMode) { newMode in
+                gameBoard.startNewGame(gameMode: newMode)
             }
         } else {
             // Fallback on earlier versions

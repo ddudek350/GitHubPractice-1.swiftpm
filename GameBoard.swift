@@ -9,11 +9,13 @@ class GameBoard: ObservableObject {
     @Published var timeLeft: Int = 5
     @Published var winLength = 3
 
+    private var justExpanded = false 
     private var boardSize = 3
     private var moveTimer: AnyCancellable?
     
-    init() {
+    init(gameMode: GameMode) {
         board = Array(repeating: Array(repeating: "", count: boardSize), count: boardSize)
+        startNewGame(gameMode: gameMode)
     }
     
     var gameStarted: Bool {
@@ -34,7 +36,16 @@ class GameBoard: ObservableObject {
         
         if checkDraw() {
             if !checkWin() {
-                expandBoard()
+                expandBoard(gameMode: gameMode)
+                currentPlayer = currentPlayer == "X" ? "O" : "X"
+
+                if gameMode == .playerVsBot && currentPlayer == "O"{
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5){
+                        self.makeBotMove(gameMode: gameMode)
+                    }
+                } else if gameMode == .playerVsPlayer{
+                    startTimer(gameMode: gameMode)
+                }
                 return
             } else {
                 gameOver = true
@@ -45,10 +56,15 @@ class GameBoard: ObservableObject {
         
         currentPlayer = currentPlayer == "X" ? "O" : "X"
         
-        if gameMode == .playerVsBot && currentPlayer == "O" && !gameOver {
-            
+        if gameMode == .playerVsBot {
+            moveTimer?.cancel()
+            if currentPlayer == "O" && !gameOver{
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5)
+            }            
                 makeBotMove(gameMode: gameMode)
             
+        } else if currentPlayer == "X" && !gameOver {
+            startTimer(gameMode: gameMode)
         } else if !gameOver {
             startTimer(gameMode: gameMode)
         }
@@ -155,6 +171,7 @@ class GameBoard: ObservableObject {
     
     private func expandBoard() {
         boardSize += 2
+        winLength += (winLength + 1 <= 4 ? 1:0)
         for i in 0..<board.count {
             board[i].insert("", at: 0)
             board[i].append("")
@@ -169,6 +186,7 @@ class GameBoard: ObservableObject {
 
     
     func resetGame() {
+        winLength = 3
         boardSize = 3
         board = Array(repeating: Array(repeating: "", count: boardSize), count: boardSize)
         currentPlayer = "X"
@@ -176,6 +194,7 @@ class GameBoard: ObservableObject {
         winner = ""
         timeLeft = 5
         moveTimer?.cancel()
+        startNewGame(gameMode: gameMode)
     }
     
     private func startTimer(gameMode: GameMode) {
@@ -209,4 +228,19 @@ class GameBoard: ObservableObject {
             makeMove(row: move.0, col: move.1, gameMode: gameMode)
         }
     }
+    func startNewGame(gameMode: GameMode){
+    winLength = 3
+    boardSize = 3
+    board = Array(repeating: Array(repeating: "", count: boardSize), count:boardSize)
+    gameOver = false
+    winner = ""
+    timeLeft = 5
+    moveTimer?.cancel()
+    currentPlayer = Bool.random() ? "X" : "O"
+    if gameMode == .playerVsBot && currentPlayer == "O"{
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5){
+            self.makeBotMove(gameMode: gameMode)
+        }
+    }
+}
 }
