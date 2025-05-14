@@ -8,17 +8,18 @@
 import SwiftUI
 
 struct CellView: View {
-    let content: String
+    let content: Player?
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
-            Text(content)
-                .font(.system(size: 50, weight: .bold))
-                .frame(width: 80, height: 80)
-                .background(Color.white)
-                .foregroundColor(content == "X" ? .blue : .red)
+            Text(content?.rawValue ?? "")
+                .font(.system(size: 24, weight: .bold))
+                .frame(width: 44, height: 44)
+                .background(Color.gray.opacity(content == nil ? 0.3 : 0.6))
+                .foregroundColor(.white)
+                .cornerRadius(8)
         }
-        .disabled(content != "")
+        .disabled(content != nil)
     }
 }
