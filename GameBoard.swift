@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 import Combine
 
 enum Player: String {
@@ -6,27 +6,30 @@ enum Player: String {
     case o = "O"
 
     var next: Player { self == .x ? .o : .x }
+    var color: Color { self == .x ? .red : .blue }
 }
 
+@MainActor
 class GameBoard: ObservableObject {
     @Published var board: [[Player?]]
-    @Published var currentPlayer: Player = .x
+    @Published var currentPlayer: Player
     @Published var gameOver = false
     @Published var winner: Player?
     @Published var timeLeft: Int = 5
     @Published var winLength: Int = 3
-
+    private var isActive = false
     private var moveTimer: AnyCancellable?
 
     init(gameMode: GameMode) {
-        board = Array(repeating: Array(repeating: nil, count: winLength), count: winLength)
-        startNewGame(gameMode: gameMode)
+        self.currentPlayer = Bool.random() ? .x : .o
+        self.board = Array(repeating: Array(repeating: nil, count: 3), count: 3)
     }
 
     func startNewGame(gameMode: GameMode) {
+        isActive = true
         winLength = 3
         board = Array(repeating: Array(repeating: nil, count: winLength), count: winLength)
-        currentPlayer = .x
+        currentPlayer = Bool.random() ? .x : .o
         gameOver = false
         winner = nil
         timeLeft = 5
@@ -35,7 +38,7 @@ class GameBoard: ObservableObject {
     }
 
     func makeMove(row: Int, col: Int, gameMode: GameMode) {
-        guard !gameOver, board[row][col] == nil else { return }
+        guard isActive, !gameOver, board[row][col] == nil else { return }
         board[row][col] = currentPlayer
         moveTimer?.cancel()
 
@@ -57,8 +60,10 @@ class GameBoard: ObservableObject {
     }
 
     private func handleNextMove(gameMode: GameMode) {
+        guard isActive else { return }
         if gameMode == .playerVsBot && currentPlayer == .o {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self = self else { return }
                 self.makeBotMove(gameMode: gameMode)
             }
         } else {
@@ -67,6 +72,7 @@ class GameBoard: ObservableObject {
     }
 
     private func startTimer(gameMode: GameMode) {
+        guard isActive else { return }
         timeLeft = 5
         moveTimer?.cancel()
         moveTimer = Timer.publish(every: 1, on: .main, in: .common)
@@ -82,7 +88,7 @@ class GameBoard: ObservableObject {
     }
 
     private func makeRandomMove(gameMode: GameMode) {
-        guard !gameOver else { return }
+        guard isActive, !gameOver else { return }
         let emptyCells = board.enumerated().flatMap { row, cols in
             cols.enumerated().compactMap { col, player in
                 player == nil ? (row, col) : nil

@@ -1,10 +1,3 @@
-//
-//  CellView.swift
-//  GitHubPractice 1
-//
-//  Created by Damian O. Dudek on 5/5/25.
-//
-
 import SwiftUI
 
 struct CellView: View {
@@ -16,8 +9,8 @@ struct CellView: View {
             Text(content?.rawValue ?? "")
                 .font(.system(size: 24, weight: .bold))
                 .frame(width: 44, height: 44)
-                .background(Color.gray.opacity(content == nil ? 0.3 : 0.6))
-                .foregroundColor(.white)
+                .background(Color.gray.opacity(content == nil ? 0.1 : 0.5))
+                .foregroundColor(content?.color ?? .primary)
                 .cornerRadius(8)
         }
         .disabled(content != nil)

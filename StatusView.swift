@@ -1,10 +1,3 @@
-//
-//  StatusView.swift
-//  GitHubPractice 1
-//
-//  Created by Damian O. Dudek on 5/5/25.
-//
-
 import SwiftUI
 
 struct GameStatusView: View {
